@@ -6,11 +6,11 @@ metadata:
     opendatahub.io/ootb: 'true'
   annotations:
     description: vLLM is a high-throughput and memory-efficient inference and serving engine for LLMs
-    openshift.io/display-name: vLLM ServingRuntime Multi-Node for KServe
+    openshift.io/display-name: vLLM Multi-Node ServingRuntime for KServe
     openshift.io/provider-display-name: Red Hat, Inc.
     tags: rhods,rhoai,kserve,servingruntime,multi-node
     template.openshift.io/documentation-url: https://github.com/opendatahub-io/vllm
-    template.openshift.io/long-description: This template defines resources needed to deploy vLLM ServingRuntime Multi-Node with KServe in Red Hat OpenShift AI
+    template.openshift.io/long-description: This template defines resources needed to deploy vLLM Multi-Node ServingRuntime with KServe in Red Hat OpenShift AI
     opendatahub.io/modelServingSupport: '["single"]'
     opendatahub.io/apiProtocol: 'REST'
   name: vllm-multinode-runtime-template
@@ -20,7 +20,7 @@ objects:
     metadata:
       name: vllm-multinode-runtime
       annotations:
-        openshift.io/display-name: vLLM ServingRuntime Multi-Node for KServe
+        openshift.io/display-name: vLLM Multi-Node ServingRuntime for KServe
         opendatahub.io/recommended-accelerators: '["nvidia.com/gpu"]'
       labels:
         opendatahub.io/dashboard: 'false'
@@ -35,7 +35,7 @@ objects:
           priority: 2
       containers:
         - name: kserve-container
-          image: $(vllm-image)
+          image: $(vllm-cuda-image)
           command: 
           - "bash"
           - "-c"
@@ -79,7 +79,7 @@ objects:
             - name: POD_IP
               valueFrom:
                 fieldRef:
-                  fieldPath: status.podIP              
+                  fieldPath: status.podIP
             - name: POD_NAMESPACE
               valueFrom:
                 fieldRef:
@@ -100,8 +100,6 @@ objects:
           volumeMounts:
             - name: shm
               mountPath: /dev/shm
-            - mountPath: /etc/ray/tls
-              name: ray-tls              
           livenessProbe:
             failureThreshold: 2
             periodSeconds: 5
@@ -124,7 +122,7 @@ objects:
                   if [[ ${health_check} != 200 ]]; then
                     echo "Unhealthy - vLLM Runtime Health Check failed." 
                     exit 1
-                  fi    
+                  fi
           readinessProbe:
             failureThreshold: 2
             periodSeconds: 5
@@ -178,17 +176,12 @@ objects:
           emptyDir:
             medium: Memory
             sizeLimit: 12Gi
-        - name: ray-tls
-          emptyDir: {}
-        - name: ray-tls-secret
-          secret:
-            secretName: ray-tls          
       workerSpec:
         pipelineParallelSize: 2
         tensorParallelSize: 1
         containers:
           - name: worker-container
-            image: $(vllm-image)
+            image: $(vllm-cuda-image)
             command:
             - "bash"
             - "-c"
@@ -238,7 +231,7 @@ objects:
               - name: POD_IP
                 valueFrom:
                   fieldRef:
-                    fieldPath: status.podIP                    
+                    fieldPath: status.podIP
             resources:
               limits:
                 cpu: '16'
@@ -249,8 +242,6 @@ objects:
             volumeMounts:
               - name: shm
                 mountPath: /dev/shm
-              - mountPath: /etc/ray/tls
-                name: ray-tls
             livenessProbe:
               failureThreshold: 2
               periodSeconds: 5
@@ -299,8 +290,3 @@ objects:
             emptyDir:
               medium: Memory
               sizeLimit: 12Gi
-          - name: ray-tls
-            emptyDir: {}
-          - name: ray-tls-secret
-            secret:
-              secretName: ray-tls
