@@ -171,11 +171,11 @@ spec:
                 description: The last time we checked the Account, failed or successful.
                 format: date-time
                 type: string
-              lastRefreshDate:
+              lastSuccessfulConfigRefresh:
                 description: The last time we refresh the integration config successfully.
                 format: date-time
                 type: string
-              lastValidationDate:
+              lastSuccessfulValidation:
                 description: The last time we validated successfully.
                 format: date-time
                 type: string
