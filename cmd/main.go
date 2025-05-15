@@ -23,8 +23,10 @@ import (
 	"os"
 	"strconv"
 
+	"github.com/go-logr/logr"
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
+	templatev1client "github.com/openshift/client-go/template/clientset/versioned"
 	istiov1beta1 "istio.io/client-go/pkg/apis/security/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -43,7 +45,6 @@ import (
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
-	"github.com/go-logr/logr"
 	corecontroller "github.com/opendatahub-io/odh-model-controller/internal/controller/core"
 	"github.com/opendatahub-io/odh-model-controller/internal/controller/nim"
 	servingcontroller "github.com/opendatahub-io/odh-model-controller/internal/controller/serving"
@@ -168,8 +169,13 @@ func main() {
 		os.Exit(1)
 	}
 
+	templateClient, tempClientErr := templatev1client.NewForConfig(cfg)
+	if tempClientErr != nil {
+		setupLog.Error(tempClientErr, "unable to create template clientset")
+		os.Exit(1)
+	}
 	signalHandlerCtx := log.IntoContext(ctrl.SetupSignalHandler(), setupLog)
-	setupNim(mgr, signalHandlerCtx, kubeClient)
+	setupNim(mgr, signalHandlerCtx, kubeClient, templateClient)
 
 	setupLog.Info("starting manager")
 	if err = mgr.Start(signalHandlerCtx); err != nil {
@@ -178,7 +184,8 @@ func main() {
 	}
 }
 
-func setupNim(mgr manager.Manager, signalHandlerCtx context.Context, kubeClient *kubernetes.Clientset) {
+func setupNim(mgr manager.Manager, signalHandlerCtx context.Context,
+	kubeClient *kubernetes.Clientset, templateClient *templatev1client.Clientset) {
 	var err error
 
 	nimState := os.Getenv("NIM_STATE")
@@ -187,9 +194,10 @@ func setupNim(mgr manager.Manager, signalHandlerCtx context.Context, kubeClient 
 	}
 	if nimState != "removed" {
 		if err = (&nim.AccountReconciler{
-			Client:  mgr.GetClient(),
-			Scheme:  mgr.GetScheme(),
-			KClient: kubeClient,
+			Client:         mgr.GetClient(),
+			Scheme:         mgr.GetScheme(),
+			KClient:        kubeClient,
+			TemplateClient: templateClient,
 		}).SetupWithManager(mgr, signalHandlerCtx); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "NIMAccount")
 			os.Exit(1)
@@ -370,7 +378,7 @@ func setupInferenceServiceReconciler(mgr ctrl.Manager, kubeClient kubernetes.Int
 		enableMRInferenceServiceReconcile,
 		getEnvAsBool("MR_SKIP_TLS_VERIFY", false),
 		cfg.BearerToken,
-	)).SetupWithManager(mgr)
+	)).SetupWithManager(mgr, setupLog)
 }
 
 func setupSecretReconciler(mgr ctrl.Manager) error {
