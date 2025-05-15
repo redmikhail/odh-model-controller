@@ -20,23 +20,23 @@ spec:
       name: Account Status
       type: string
     - description: Last account check, failed or successful
-      jsonPath: .status.LastAccountCheck
+      jsonPath: .status.lastAccountCheck
       name: Account Check
       type: date
     - description: Validation refresh rate
-      jsonPath: .spec.ValidationRefreshRate
+      jsonPath: .spec.validationRefreshRate
       name: Validation Rate
       type: string
     - description: Last successful validation
-      jsonPath: .status.LastSuccessfulValidation
+      jsonPath: .status.lastSuccessfulValidation
       name: Last Successful Validation
       type: date
     - description: Config refresh rate
-      jsonPath: .spec.NIMConfigRefreshRate
+      jsonPath: .spec.nimConfigRefreshRate
       name: Config Rate
       type: string
     - description: Last successful config refresh
-      jsonPath: .status.LastSuccessfulConfigRefresh
+      jsonPath: .status.lastSuccessfulConfigRefresh
       name: Last Successful Config
       type: date
     name: v1
